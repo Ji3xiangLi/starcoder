@@ -20,13 +20,15 @@ import torch
 from dialogues import DialogueTemplate, get_dialogue_template
 from transformers import (AutoModelForCausalLM, AutoTokenizer,
                           GenerationConfig, set_seed)
-
+from accelerate import init_empty_weights, load_checkpoint_and_dispatch
+from huggingface_hub import snapshot_download
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model_id",
         type=str,
+        default="bigcode/starcoder",
         help="Name of model to generate samples with",
     )
     parser.add_argument(
@@ -110,9 +112,19 @@ def main():
         min_new_tokens=32,
         max_new_tokens=256,
     )
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_id, revision=args.revision, load_in_8bit=True, device_map="auto", torch_dtype=torch.float16
-    )
+    with init_empty_weights():
+        raw_model = AutoModelForCausalLM.from_pretrained(args.model_id, torch_dtype=torch.float16)
+    raw_model.tie_weights()
+    model = load_checkpoint_and_dispatch(
+            raw_model,
+            checkpoint=snapshot_download(args.model_id),
+            device_map="auto",
+            no_split_module_classes=["GPTBigCodeBlock"],  # 根据模型结构修改，不能拆分到多个设备的modulename，含有残差的module都应该写上去。
+            dtype=torch.float16)
+
+    # model = AutoModelForCausalLM.from_pretrained(
+    #     args.model_id, revision=args.revision, load_in_8bit=True, device_map="auto", torch_dtype=torch.float16
+    # )
     outputs = ""
     for idx, prompt in enumerate(formatted_prompts):
         batch = tokenizer(prompt, return_tensors="pt", return_token_type_ids=False).to(device)

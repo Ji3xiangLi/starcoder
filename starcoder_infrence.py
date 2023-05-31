@@ -1,9 +1,10 @@
 from typing import Tuple
 import torch
 from huggingface_hub import snapshot_download
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, GenerationConfig
 from accelerate import init_empty_weights, load_checkpoint_and_dispatch
-from flask import Flask
+from flask import Flask, request, jsonify
+from flask_cors import *
 
 app = Flask(__name__)
 
@@ -24,9 +25,9 @@ class Inference:
         """
         print("Model Parallelism Devices: ", torch.cuda.device_count())
         # Initialize an empty model with the loaded configuration and set the data type to float16
-        config = AutoConfig.from_pretrained(self.checkpoint)
+        # config = AutoConfig.from_pretrained(self.checkpoint)
         with init_empty_weights():
-            raw_model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.float16)
+            raw_model = AutoModelForCausalLM.from_pretrained(self.checkpoint, torch_dtype=torch.float16)
         # Tie the model's weights
         raw_model.tie_weights()
 
@@ -42,8 +43,19 @@ class Inference:
     def forward(self, input_text: str):
         inputs = self.tokenizer(input_text, return_tensors="pt")
         inputs = inputs.to(0)
-        outputs = self.model.generate(inputs["input_ids"])
-        return self.tokenizer.decode(outputs[0].tolist())
+        generation_config = GenerationConfig(
+            temperature=0.2,
+            top_k=50,
+            top_p=0.95,
+            repetition_penalty=1.2,
+            do_sample=True,
+            pad_token_id= self.tokenizer.eos_token_id,
+            eos_token_id= self.tokenizer.convert_tokens_to_ids("<|end|>"),
+            min_new_tokens=32,
+            max_new_tokens=256,
+        )
+        outputs = self.model.generate(inputs["input_ids"], generation_config = generation_config )
+        return self.tokenizer.decode(outputs[0].tolist(), skip_special_tokens=False).lstrip()
 
     def __call__(self, input_text):
         return self.forward(input_text)
