@@ -7,8 +7,7 @@ def set_args():
     parser.add_argument("--input_text", type=str, default="def print_hello_world():")
     return parser.parse_args()
 
-
-if __name__ == '__main__':
+def main():
     args = set_args()
     model = AutoModelForCausalLM.from_pretrained("bigcode/starcoder")
     tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder")
@@ -19,3 +18,6 @@ if __name__ == '__main__':
     inputs = tokenizer.encode(args.input_text, return_tensors="pt")
     outputs = model.generate(inputs)
     print(tokenizer.decode(outputs[0]))
+
+if __name__ == '__main__':
+    main()
