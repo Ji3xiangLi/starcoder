@@ -1,5 +1,6 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from accelerate import Accelerator
+from accelerate import Accelerator, load_checkpoint_and_dispatch, init_empty_weights
+import torch
 import argparse
 
 def set_args():
@@ -9,11 +10,18 @@ def set_args():
 
 def main():
     args = set_args()
-    model = AutoModelForCausalLM.from_pretrained("bigcode/starcoder")
+    print("Waiting for all devices to be ready, it may take a few minutes...")
+    with init_empty_weights():
+        raw_model = AutoModelForCausalLM.from_pretrained("bigcode/starcoder", torch_dtype=torch.float16)
+    raw_model.tie_weights()
+    model = load_checkpoint_and_dispatch(
+        raw_model, "bigcode/starcoder", device_map="auto", dtype=torch.float16
+    )
+    # model = AutoModelForCausalLM.from_pretrained("bigcode/starcoder")
     tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder")
 
     accelerator = Accelerator(mixed_precision="fp16")
-    accelerator.print(accelerator.device)
+    accelerator.print("device: ", accelerator.device)
     model = accelerator.prepare(model)
     inputs = tokenizer.encode(args.input_text, return_tensors="pt")
     outputs = model.generate(inputs)
