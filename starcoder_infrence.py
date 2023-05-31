@@ -48,7 +48,7 @@ class Inference:
     def __call__(self, input_text):
         return self.forward(input_text)
 
-@app.run("/", methods=["GET"])
+@app.route("/", methods=["GET"])
 @cross_origin()
 def run():
     input_text = request.args.get("input", "")
