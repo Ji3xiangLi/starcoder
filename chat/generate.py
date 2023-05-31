@@ -40,49 +40,66 @@ def main():
     parser.add_argument(
         "--system_prompt", type=str, default=None, help="Overrides the dialogue template's system prompt"
     )
+    parser.add_argument(
+        "--input_texts", type=list, default=["create a queue in python", "write a quick in Python"], help="Overrides the dialogue template's system prompt"
+    )
     args = parser.parse_args()
 
     # Set seed for reproducibility
     set_seed(42)
 
-    prompts = [
-        [
-            {
+    # prompts = [
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Develop a C++ program that reads a text file line by line and counts the number of occurrences of a specific word in the file.",
+    #         }
+    #     ],
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Implement a Python function to find the longest common subsequence of two input strings using dynamic programming.",
+    #         }
+    #     ],
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Implement a regular expression in Python to validate an email address."
+    #         }
+    #     ],
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Write a program to find the nth Fibonacci number using dynamic programming.",
+    #         }
+    #     ],
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Implement a binary search algorithm to find a specific element in a sorted array.",
+    #         }
+    #     ],
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Implement a queue data structure using two stacks in Python."
+    #         }
+    #     ],
+    #     [
+    #         {
+    #             "role": "user",
+    #             "content": "Implement a program to find the common elements in two arrays without using any extra data structures.",
+    #         }
+    #     ],
+    # ]
+    prompts = [[{
                 "role": "user",
-                "content": "Develop a C++ program that reads a text file line by line and counts the number of occurrences of a specific word in the file.",
-            }
-        ],
-        [
-            {
-                "role": "user",
-                "content": "Implement a Python function to find the longest common subsequence of two input strings using dynamic programming.",
-            }
-        ],
-        [{"role": "user", "content": "Implement a regular expression in Python to validate an email address."}],
-        [
-            {
-                "role": "user",
-                "content": "Write a program to find the nth Fibonacci number using dynamic programming.",
-            }
-        ],
-        [
-            {
-                "role": "user",
-                "content": "Implement a binary search algorithm to find a specific element in a sorted array.",
-            }
-        ],
-        [{"role": "user", "content": "Implement a queue data structure using two stacks in Python."}],
-        [
-            {
-                "role": "user",
-                "content": "Implement a program to find the common elements in two arrays without using any extra data structures.",
-            }
-        ],
-    ]
+                "content": input_text}] for input_text in args.input_texts]
 
     try:
         dialogue_template = DialogueTemplate.from_pretrained(args.model_id, revision=args.revision)
     except Exception:
+        # todo 搞明白这个system prompt应该是什么
         print("No dialogue template found in model repo. Defaulting to the `no_system` template.")
         dialogue_template = get_dialogue_template("no_system")
 
