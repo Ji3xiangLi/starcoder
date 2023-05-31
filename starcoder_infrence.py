@@ -3,7 +3,9 @@ import torch
 from huggingface_hub import snapshot_download
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from accelerate import init_empty_weights, load_checkpoint_and_dispatch
+from flask import Flask
 
+app = Flask(__name__)
 
 class Inference:
     def __init__(self):
@@ -28,13 +30,11 @@ class Inference:
         # Tie the model's weights
         raw_model.tie_weights()
 
-        # Load the checkpoint and dispatch the model to the specified devices
-        # no_split_module_class = ["GPTJBlock"]  的意思是modules为GPTJBlock的都不会拆分到多个设备上，这里所有需要残差计算的模型都应该写上去。
         model = load_checkpoint_and_dispatch(
             raw_model,
             checkpoint=snapshot_download(self.checkpoint),
             device_map="auto",
-            no_split_module_classes=["GPTBigCodeBlock"],  # 根据模型结构修改
+            no_split_module_classes=["GPTBigCodeBlock"],  # 根据模型结构修改，不能拆分到多个设备的modulename，含有残差的module都应该写上去。
             dtype=torch.float16)
 
         return model
@@ -48,9 +48,16 @@ class Inference:
     def __call__(self, input_text):
         return self.forward(input_text)
 
+@app.run("/", methods=["GET"])
+@cross_origin()
+def run():
+    input_text = request.args.get("input", "")
+    res = infer(input_text)
+    return {"success":1, "response": res}
 
 if __name__ == "__main__":
     infer = Inference()
-    test_case = "please write a quick sort code"
-    res = infer(test_case)
-    print(res)
+    app.run(host = "0.0.0.0", port=12342)
+    # test_case = "please write a quick sort code"
+    # res = infer(test_case)
+    # print(res)
