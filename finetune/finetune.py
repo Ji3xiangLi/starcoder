@@ -13,6 +13,25 @@ from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
 """
 Fine-Tune StarCoder on Code Alpaca/SE
+
+运行方法：
+python finetune/finetune.py \
+  --model_path="bigcode/starcoder"\
+  --dataset_path="data/leetcode_instructions.jsonl"\
+  # --split="train"\
+  --size_valid_set 1000\
+  --streaming\
+  --seq_length 2048\
+  --max_steps 1000\
+  --batch_size 1\
+  --input_column_name="input"\
+  --output_column_name="output" \ 
+  --gradient_accumulation_steps 16\
+  --learning_rate 1e-4\
+  --lr_scheduler_type="cosine"\
+  --num_warmup_steps 100\
+  --weight_decay 0.05\
+  --output_dir="./checkpoints" \
 """
 
 class SavePeftModelCallback(TrainerCallback):
@@ -51,8 +70,8 @@ class LoadBestPeftModelCallback(TrainerCallback):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default="bigcode/large-model")
-    parser.add_argument("--dataset_name", type=str, default="HuggingFaceH4/CodeAlpaca_20K")
-    parser.add_argument("--subset", type=str)
+    # parser.add_argument("--dataset_name", type=str, default="HuggingFaceH4/CodeAlpaca_20K")
+    # parser.add_argument("--subset", type=str) # subset 和 split 都是huggingface 默认带的数据分离tag
     parser.add_argument("--split", type=str)
     parser.add_argument("--size_valid_set", type=int, default=10000)
     parser.add_argument("--streaming", action="store_true")
@@ -147,8 +166,8 @@ class ConstantLengthDataset(IterableDataset):
         seq_length=1024,
         num_of_sequences=1024,
         chars_per_token=3.6,
-        input_column_name="prompt",
-        output_column_name="completion"
+        input_column_name="prompt",  # 选定输入的列名
+        output_column_name="completion"  # 选定输出的列名
     ):
         self.tokenizer = tokenizer
         self.concat_token_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else args.eos_token_id
@@ -192,23 +211,32 @@ class ConstantLengthDataset(IterableDataset):
 
 
 def create_datasets(tokenizer, args):
-    dataset = load_dataset(
-        args.dataset_name,
-        data_dir=args.subset,
-        split=args.split,
-        use_auth_token=True,
-        num_proc=args.num_workers if not args.streaming else None,
-        streaming=args.streaming,
-    )
-    if args.streaming:
-        print("Loading the dataset in streaming mode")
-        valid_data = dataset.take(args.size_valid_set)
-        train_data = dataset.skip(args.size_valid_set)
-        train_data = train_data.shuffle(buffer_size=args.shuffle_buffer, seed=args.seed)
-    else:
-        train_data = dataset["train"]
-        valid_data = dataset["test"]
-        print(f"Size of the train set: {len(train_data)}. Size of the validation set: {len(valid_data)}")
+    """
+    加载数据集，返回训练集和验证集。
+    """
+    dataset = load_dataset("json", data_files=args.subset)
+    print("Loading the dataset in streaming mode")
+    valid_data = dataset.take(args.size_valid_set)
+    train_data = dataset.skip(args.size_valid_set)
+    train_data = train_data.shuffle(buffer_size=args.shuffle_buffer, seed=args.seed)
+    # dataset = load_dataset(  # hf中的默认方法
+    #     args.dataset_name,
+    #     data_dir=args.subset,  # 是huggingface 上可能分离了数据集，那个页面上的，如果本地数据集我猜只要写地址就行。
+    #     split=args.split,
+    #     use_auth_token=True,
+    #     num_proc=args.num_workers if not args.streaming else None,
+    #     streaming=args.streaming,  # bool, streaming 用来管理数据集的大小
+    # )
+    # if args.streaming:
+    #     print("Loading the dataset in streaming mode")
+    #     valid_data = dataset.take(args.size_valid_set)
+    #     train_data = dataset.skip(args.size_valid_set)
+    #     train_data = train_data.shuffle(buffer_size=args.shuffle_buffer, seed=args.seed)
+    # else:
+    #     # 若streaming为False，直接取train test的数据集
+    #     train_data = dataset["train"]
+    #     valid_data = dataset["test"]
+    #     print(f"Size of the train set: {len(train_data)}. Size of the validation set: {len(valid_data)}")
 
     chars_per_token = chars_token_ratio(train_data, tokenizer, args.input_column_name, args.output_column_name)
     print(f"The character to token ratio of the dataset is: {chars_per_token:.2f}")
@@ -244,9 +272,9 @@ def run_training(args, train_data, val_data):
         load_in_8bit=True,
         device_map={"": Accelerator().process_index},
     )
-    model = prepare_model_for_int8_training(model)
+    model = prepare_model_for_int8_training(model)  # 使用的int8版本训练，证明量化模型可以用来训练。
 
-    lora_config = LoraConfig(
+    lora_config = LoraConfig(  # Lora 的训练参数
         r=args.lora_r,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
@@ -285,7 +313,7 @@ def run_training(args, train_data, val_data):
         report_to="wandb",
         ddp_find_unused_parameters=False,
     )
-
+    # Trainer 要再看一下具体的用法
     trainer = Trainer(model=model, args=training_args, train_dataset=train_data, eval_dataset=val_data, callbacks=[SavePeftModelCallback, LoadBestPeftModelCallback])
 
     print("Training...")
