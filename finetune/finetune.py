@@ -19,7 +19,7 @@ python finetune/finetune.py \
   --model_path="bigcode/starcoder"\
   --dataset_path="data/leetcode_instructions.jsonl"\
   # --split="train"\
-  --size_valid_set 1000\
+  --size_valid_set 3000\
   --streaming\
   --seq_length 2048\
   --max_steps 1000\
