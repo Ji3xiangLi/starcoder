@@ -79,9 +79,13 @@ For more details, see [here](https://github.com/huggingface/text-generation-infe
 
 Here, we showcase how we can fine-tune this LM on a specific downstream task.
 
+介绍如何对Starcoder进行微调。
+
 ## Step by step installation with conda 
 
 Create a new conda environment and activate it
+
+创建Conda虚拟环境。
 ```bash
 conda create -n env
 conda activate env
@@ -123,6 +127,8 @@ Before you run any of the scripts make sure you are logged in and can push to th
 huggingface-cli login
 ```
 Make sure you are logged in `wandb`:
+
+！需要注意 wandb 需要登陆
 ```bash
 wandb login
 ```
@@ -131,11 +137,13 @@ Now that everything is done, you can clone the repository and get into the corre
 ## Datasets
 💫 StarCoder can be fine-tuned to achieve multiple downstream tasks. Our interest here is to fine-tune StarCoder in order to make it follow instructions. [Instruction fine-tuning](https://arxiv.org/pdf/2109.01652.pdf) has gained a lot of attention recently as it proposes a simple framework that teaches language models to align their outputs with human needs. That procedure requires the availability of quality instruction datasets, which contain multiple `instruction - answer` pairs. Unfortunately such datasets are not ubiquitous but thanks to Hugging Face 🤗's [datasets](https://github.com/huggingface/datasets) library we can have access to some good proxies. To fine-tune cheaply and efficiently, we use Hugging Face 🤗's [PEFT](https://github.com/huggingface/peft) as well as Tim Dettmers' [bitsandbytes](https://github.com/TimDettmers/bitsandbytes).
 
-
+给了一个对starcoder 进行指令微调的例子，指令微调可以让预训练模型输出和人类需求对齐。需要的训练数据是<指令，回答>这种形式的。使用的数据集来自StackExchange SE 一个知名的问答网站（知乎？），用来提高模型回答问题的能力。
 ### Stack Exchange SE
 [Stack Exchange](https://en.wikipedia.org/wiki/Stack_Exchange) is a well-known network of Q&A websites on topics in diverse fields. It is a place where a user can ask a question and obtain answers from other users. Those answers are scored and ranked based on their quality. [Stack exchange instruction](https://huggingface.co/datasets/ArmelR/stack-exchange-instruction) is a dataset that was obtained by scrapping the site in order to build a collection of Q&A pairs. A language model can then be fine-tuned on that dataset to make it elicit strong and diverse question-answering skills.
 
 To execute the fine-tuning script run the following command:
+
+模型的微调运行方法
 ```bash
 python finetune/finetune.py \
   --model_path="bigcode/starcoder"\
@@ -158,6 +166,7 @@ python finetune/finetune.py \
 ```
 The size of the SE dataset is better manageable when using streaming. We also have to precise the split of the dataset that is used. For more details, check the [dataset's page](https://huggingface.co/datasets/ArmelR/stack-exchange-instruction) on 🤗. Similarly we can modify the command to account for the availability of GPUs
 
+参数中使用straming 可以更好的控制SE 数据集的大小，也可以修改以下参数来配置GPU的设备。
 ```bash
 python -m torch.distributed.launch \
   --nproc_per_node number_of_gpus finetune/finetune.py \
@@ -181,6 +190,8 @@ python -m torch.distributed.launch \
 ```
 ## Merging PEFT adapter layers
 If you train a model with PEFT, you'll need to merge the adapter layers with the base model if you want to run inference / evaluation. To do so, run:
+
+如果使用peft来训练，那么训练中添加的模型结构和参数就需要添加到base模型上才能为后续训练和评估使用。需要运行`finetune/merge_peft_adapters.py`.
 ```bash
 python finetune/merge_peft_adapters.py --base_model_name_or_path model_to_merge --peft_model_path model_checkpoint
 
@@ -196,8 +207,11 @@ python finetune/merge_peft_adapters.py --model_name_or_path bigcode/starcoder --
 # Evaluation
 To evaluate StarCoder and its derivatives, you can use the [BigCode-Evaluation-Harness](https://github.com/bigcode-project/bigcode-evaluation-harness) for evaluating Code LLMs.
 
+评估starcoder 和其变体，可以查看上面这个连接。
 # Inference hardware requirements
 In FP32 the model requires more than 60GB of RAM, you can load it in FP16 or BF16 in ~30GB, or in 8bit under 20GB of RAM with
+
+FP32的模型，推理需要至少60GB的内存。FP16 大约30GB。8Bit 20GB。
 ```python
 # make sure you have accelerate and bitsandbytes installed
 from transformers import AutoModelForCausalLM, AutoTokenizer

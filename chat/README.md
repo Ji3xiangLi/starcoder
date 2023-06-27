@@ -2,6 +2,7 @@
 
 This is a fully-working example to fine-tune `StarCoder` on a corpus of multi-turn dialogues and thus create a coding assistant that is chatty and helpful. The resulting model is quite good at generating code for plots and other programming tasks. For example, given the prompt:
 
+这是一个用多轮对话微调StarCoder的例子，用这种方式让那个代码助手变得善于聊天、辅助写代码。这个结果模型挺适合生成**画图代码**和其他代码任务的。
 ```
 Draw me a map of the world using geopandas. Make it so that only Germany and Spain are colored red.
 ```
@@ -66,6 +67,7 @@ sudo apt-get install git-lfs
 
 For training and inference, we use _dialogue templates_ to format each message in a conversation. For example, a typical dialogue between a human user and AI assistant takes the form:
 
+使用的多轮对话数据格式是这个样子的，请确保你的数据集也要转换成这个样子。注意要像下面这个例子一样包含"messages"列。可以在``config.yaml`中修改文件。
 ```json
 {
     "messages": [
@@ -94,6 +96,8 @@ Make sure you convert your dataset according to this schema, in particular you n
 
 We use DeepSpeed ZeRO-3 to shard the model and optimizer across 8 x A100 (80GB) GPUs. To fine-tune run:
 
+使用的DeepSpeed ZeRo-3来切分模型，然后使用了8块A100来训练。启动微调使用以下：
+
 ```
 TRANSFORMERS_VERBOSITY=info torchrun --nproc_per_node=8 train.py config.yaml --deepspeed=deepspeed_z3_config_bf16.json
 ```
@@ -104,6 +108,8 @@ By default, this will save the model checkpoint in the `data/` directory and als
 ## Generate samples
 
 To generate a few coding examples from your model, run:
+
+使用微调后的代码生成，请使用以下代码。
 
 ```shell
 python generate.py --model_id path/to/your/model
