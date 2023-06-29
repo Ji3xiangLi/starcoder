@@ -3,9 +3,9 @@
 启动前需要提前指定visible devices
 
 export CUDA_VISIBLE_DEVICES="4,5"
-nohup python starcoder_api.py &
+nohup python api.py &
 """
-from infrence import load_dispatched_model_and_tokenizer, StarCoderChat, StarCoderInference
+from inference import load_dispatched_model_and_tokenizer, StarCoderChat, StarCoderInference
 from flask import Flask, request
 from flask_cors import *
 
@@ -37,8 +37,9 @@ def get_chat_response():
 
 
 if __name__ == '__main__':
-    starcoder_id = "bigcode/starcoder"
-    starcoder_model, starcoder_tokenizer = load_dispatched_model_and_tokenizer(starcoder_id)
+    # starcoder_id = "bigcode/starcoder"
+    starcoder_path = "../models/starcoder"
+    starcoder_model, starcoder_tokenizer = load_dispatched_model_and_tokenizer(starcoder_path)
 
     # 实例化聊天模式
     chat = StarCoderChat(starcoder_model, starcoder_tokenizer)

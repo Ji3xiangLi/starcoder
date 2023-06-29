@@ -13,10 +13,10 @@ from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
 """
 Fine-Tune StarCoder on Code Alpaca/SE
-
+来源为starcoder 代码中的lora finetune 方法，对数据集的加载来进行一些修改。
 运行方法：
-python finetune/finetune.py \
-  --model_path="bigcode/starcoder"\
+python finetune/finetune_lora.py \
+  --model_path="../models/starcoder"\
   --dataset_path="data/leetcode_instructions.jsonl"\
   # --split="train"\
   --size_valid_set 3000\
@@ -152,10 +152,10 @@ class ConstantLengthDataset(IterableDataset):
         Args:
             tokenizer (Tokenizer): The processor used for proccessing the data.
             dataset (dataset.Dataset): Dataset with text files.
-            infinite (bool): If True the iterator is reset after dataset reaches end else stops.
-            seq_length (int): Length of token sequences to return.
-            num_of_sequences (int): Number of token sequences to keep in buffer.
-            chars_per_token (int): Number of characters per token used to estimate number of tokens in text buffer.
+            infinite (bool): True，代表数据集遍历完毕以后，迭代重置从头开始。False，停止。 If True the iterator is reset after dataset reaches end else stops.
+            seq_length (int): 返回的token序列长度。 Length of token sequences to return.
+            num_of_sequences (int): buffer中token序列的数量。Number of token sequences to keep in buffer.
+            chars_per_token (int): 每个token中的字符数（用来估算text buffer里面tokens 的数量）。Number of characters per token used to estimate number of tokens in text buffer.
     """
 
     def __init__(

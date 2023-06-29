@@ -152,7 +152,7 @@ def load_dispatched_model_and_tokenizer(model_id):
     raw_model.tie_weights()
     model = load_checkpoint_and_dispatch(
         raw_model,
-        checkpoint=snapshot_download(model_id),
+        checkpoint= model_id, # snapshot_download(model_id),
         device_map="auto",
         no_split_module_classes=["GPTBigCodeBlock"],  # 根据模型结构修改，不能拆分到多个设备的modulename，含有残差的module都应该写上去。
         dtype=torch.float16)
@@ -161,8 +161,9 @@ def load_dispatched_model_and_tokenizer(model_id):
 
 if __name__ == '__main__':
     set_seed(42)
-    starcoder_id = "bigcode/starcoder"
-    starcoder_model, starcoder_tokenizer = load_dispatched_model_and_tokenizer(starcoder_id)
+    # starcoder_id = "bigcode/starcoder"
+    starcoder_path = "../models/starcoder"
+    starcoder_model, starcoder_tokenizer = load_dispatched_model_and_tokenizer(starcoder_path)
 
     # 实例化聊天模式
     chat = StarCoderChat(starcoder_model, starcoder_tokenizer)
